@@ -11,7 +11,7 @@ float Roll, Pitch, Temp;
 float rollStart, pitchStart;
 float r2D = (3.14/180); //Radian to Degrees
 
-void watchOrientation(void) {
+void watchOrientation(void *parameters) {
   
   //Getting measurements from Accelerometer
   Wire.beginTransmission(0x68);
@@ -54,8 +54,9 @@ void watchOrientation(void) {
     Serial.println("Turning off Screen");
   }
 */
+vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
-void internalTemp(void) {
+void internalTemp(void *parameters) {
   //Getting measurements from Temperature Sensor
   Wire.beginTransmission(0x68);
   Wire.write(0x41);
@@ -73,6 +74,8 @@ void internalTemp(void) {
     else {
     Serial.println("Keeping the watch on");
     }
+  
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 void setup() {
@@ -97,11 +100,12 @@ void setup() {
   Wire.write(0x1B); 
   Wire.write(0x8);
   Wire.endTransmission();
+
+  xTaskCreate(internalTemp, "Temp", 10000, NULL, 0, NULL);
+  xTaskCreate(watchOrientation, "Orientation", 10000, NULL, 1, NULL);
 }
 
 void loop() {
-  watchOrientation();
-  internalTemp();
   Serial.print("Roll=");
   Serial.print(Roll);
   Serial.print("  ");
@@ -119,5 +123,4 @@ void loop() {
   Serial.print("  ");
   Serial.print("Temp= ");
   Serial.println(Temp);
-  delay(50);
 }
