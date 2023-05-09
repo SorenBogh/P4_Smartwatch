@@ -6,7 +6,8 @@ const uint8_t scl = 22;
 
 int16_t AccX, AccY, AccZ;
 int16_t gyroX, gyroY, gyroZ;
-float Roll, Pitch;
+int16_t tempData;
+float Roll, Pitch, Temp;
 float rollStart, pitchStart;
 float r2D = (3.14/180); //Radian to Degrees
 
@@ -60,11 +61,13 @@ void internalTemp(void) {
   Wire.write(0x41);
   Wire.endTransmission();
   Wire.requestFrom(0x68,2);
-  int16_t temp = Wire.read() << 8 | Wire.read();
+  tempData = Wire.read() << 8 | Wire.read();
   
-  Serial.println(temp);
+  Temp = (float)tempData;
 
-  if (temp > 80)  {
+  Temp = (Temp/340) + 36.53;
+
+  if (Temp > 80)  {
     Serial.println("Turning Off the Watch");
   }
     else {
@@ -98,6 +101,7 @@ void setup() {
 
 void loop() {
   watchOrientation();
+  internalTemp();
   Serial.print("Roll=");
   Serial.print(Roll);
   Serial.print("  ");
@@ -111,6 +115,9 @@ void loop() {
   Serial.print(gyroY);
   Serial.print("  ");
   Serial.print("Gyro Z= ");
-  Serial.println(gyroZ);
+  Serial.print(gyroZ);
+  Serial.print("  ");
+  Serial.print("Temp= ");
+  Serial.println(Temp);
   delay(50);
 }
