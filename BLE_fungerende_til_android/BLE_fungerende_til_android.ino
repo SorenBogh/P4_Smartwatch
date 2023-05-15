@@ -4,9 +4,8 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <BLE2902.h>
-#include <ESP32Time.h>
 
-ESP32Time rtc;
+
 uint8_t type[] = { 0xAB, 0x00, 0x11, 0xFF, 0x92, 0xC0, 0x01, 0x01, 0x38, 0x81, 0x10, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xA2, 0x00, 0x80 };  // id for DT78 app
 
 #define SERVICE_UUID "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
@@ -39,12 +38,6 @@ class MyServerCallbacks : public BLEServerCallbacks {
 class MyCallbacks : public BLECharacteristicCallbacks {
 
   void onStatus(BLECharacteristic* pCharacteristic, Status s, uint32_t code) {
-    Serial.print("Status ");
-    Serial.print(s);
-    Serial.print(" on characteristic ");
-    Serial.print(pCharacteristic->getUUID().toString().c_str());
-    Serial.print(" with code ");
-    Serial.println(code);
   }
 
   void onNotify(BLECharacteristic* pCharacteristic) {
@@ -52,17 +45,6 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     std::string value = pCharacteristic->getValue();
     int len = value.length();
     pData = pCharacteristic->getData();
-    if (pData != NULL) {
-      Serial.print("Notify callback for characteristic ");
-      Serial.print(pCharacteristic->getUUID().toString().c_str());
-      Serial.print(" of data length ");
-      Serial.println(len);
-      Serial.print("TX  ");
-      for (int i = 0; i < len; i++) {
-        Serial.printf("%02X ", pData[i]);
-      }
-      Serial.println();
-    }
   }
 
   void onWrite(BLECharacteristic* pCharacteristic) {
@@ -71,21 +53,8 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     int len = value.length();
     pData = pCharacteristic->getData();
     if (pData != NULL) {
-      Serial.print("Write callback for characteristic ");
-      Serial.print(pCharacteristic->getUUID().toString().c_str());
-      Serial.print(" of data length ");
-      Serial.println(len);
-      Serial.print("RX  ");
-      for (int i = 0; i < len; i++) {
-        Serial.printf("%02X ", pData[i]);
-      }
-      Serial.println();
-
       if (pData[0] == 0xAB) {
         switch (pData[4]) {
-          case 0x93:
-            rtc.setTime(pData[13], pData[12], pData[11], pData[10], pData[9], pData[7] * 256 + pData[8]);
-            break;
           case 0x7C:
             hr24 = pData[6] == 0;
             break;
@@ -193,22 +162,20 @@ void initBLE() {
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
   BLEDevice::startAdvertising();
-  Serial.println("Characteristic defined! Now you can read it in your phone!");
 }
 
 void setup() {
+  xTaskCreate(showNotification, "ble", 3500, NULL, 3, NULL);
   Serial.begin(115200);
-  Serial.println("Starting BLE work!");
   initBLE();
 }
 
 void loop() {
 
-
-  showNotification();  // show notification
 }
 
-void showNotification() {
+void showNotification(void* pvParameters) {
+  while (1){
   String s = String(msg);
   copyMsg(s);
   if (s.length() == 0) {
@@ -229,6 +196,9 @@ void showNotification() {
       lastmessage = msg0;
     }
   }
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
 }
 
 
