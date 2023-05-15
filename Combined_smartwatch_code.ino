@@ -4,19 +4,19 @@ Code currently has the functionality:
   Tells temperature
   Tells watch orientation
   Tells weatherdata
+  LDR
+  Heartrate monitor 
 
 Things yet to be implemented:
-  LDR - currently not being worked on but should be easy
-  Heartrate monitor - probably can get it to work
-  SMS'er/Messenger - Thoaaar has the code
-  consistent communication with display
+  -SMS'er/Messenger - Thoaaar has the code
+  -consistent communication with display
 
 Things to do when all is implemented:
-  Set priories based on all of the tasks instead of only the ones they were developed alongside
-  set vTaskDelay to a reasonable value
-  ensure that there is full utilization of the dual core processor and possibly the ULP
-  Make sure all serial communication with the display is understood correctly by the pixxi28 processor.
-  Make sure the use of freeRTOS does not have unforseen consequences.
+  -Set priories based on all of the tasks instead of only the ones they were developed alongside
+  -set vTaskDelay to a reasonable value
+  -ensure that there is full utilization of the dual core processor and possibly the ULP
+  -Make sure all serial communication with the display is understood correctly by the pixxi28 processor.
+  -Make sure the use of freeRTOS does not have unforseen consequences.
 */
 
 /*  
@@ -34,6 +34,21 @@ Introduction
 
 */
 
+// PulseSensor values used to save and calculate BPM
+  int pscurrentVal = 0;
+  int pspreviousVal = 0;
+  int psmaxVal = 0;
+  int psminVal = 0;
+  int pscheckVal = 0;
+  float psdiff = 0;
+  bool psonce = false;
+  float Comp[9];
+  float psmaxval = 0;  //max værdi i forhold til diff
+  float psminval = 0;  //min værdi i arrayet til bestemmelse af diff
+  int psBPM=0; // beatsPerMinute
+  int pscurrentBeat; 
+  int pslastBeat;
+
 //test bools for weather functionality
   bool Testing = false;      //Prints the API string
   bool DataToSerial = true;  //Prints the Weather data after assigning
@@ -50,29 +65,18 @@ Introduction
   #include <time.h>
   #include <HardwareSerial.h>  // allow us to set which pins we want to use for serial communication, which is needed to communicate with the display
   #include <Wire.h>            // used for I2C communication between esp32 and sensors
-  #include <genieArduino.h>
-// Libraries used for bluetooth connectivity and sending messages between the phone and esp32
-/*
-  #include <BLEDevice.h>
-  #include <BLEServer.h>
-  #include <BLEUtils.h>
-  #include <BLE2902.h>
-*/
+
 // pins for display communication
   #define RESETLINE 33  // pin 33 is used to reset the display
   #define RXp2 25       // Sets the TX and RX pins to pin 25 and 26. This is necessary as the standard pins for an esp32 are used for the built in display on the ttgo t1 board
   #define TXp2 26
 
-// bluetooth definitions
-  #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"  // UART service UUID
-  #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-  #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
 
-// Constants used in the watch orientation program
-  const uint8_t sda = 21;
+// Constants used in the watch orientation program and temperature
+  const uint8_t sda = 21; // used for I2C communication
   const uint8_t scl = 22;
-  int16_t AccXdata, AccYdata, AccZdata;
+  int16_t AccXdata, AccYdata, AccZdata; // accelerometer data
   float AccX, AccY, AccZ;
   int16_t tempData;
   float Roll, Pitch, Temp;
@@ -80,8 +84,8 @@ Introduction
 
 
 //WiFi setup
-  char ssid[] = "OnePlus 8T";
-  char password[] = "humahe47";
+  char ssid[] = "OnePlus 8T"; // name of wifi
+  char password[] = "humahe47"; // wifi password
   IPAddress ip;
 //API setup
   HTTPClient client;
@@ -102,7 +106,7 @@ Introduction
 
 //Timer setup for weatherdata
   unsigned long lasttime;
-  unsigned long timerdelay = 6000;
+  unsigned long timerdelay = 60000;
 
 //WeatherData setup
   struct WeatherData {
@@ -142,6 +146,13 @@ Introduction
 
 WeatherData WeatherNow;  //A Global struct "case"
 
+// LDR constants
+  int LDR; // this is the integer where the data is saved
+  const int LDRsensor = 12; // Pin 12 is the pin used for LDR measurement
+  const int res = 12; // 12 is the resolution of the ADC used
+
+
+
 // Used for saving the time, and later sending it to the display
   static uint8_t conv2d(const char* p) {
   uint8_t v = 0;
@@ -149,21 +160,24 @@ WeatherData WeatherNow;  //A Global struct "case"
     v = *p - '0';
   return 10 * v + *++p - '0';
   }
-  uint8_t hh = conv2d(__TIME__), mm = conv2d(__TIME__ + 3), ss = conv2d(__TIME__ + 6);
+uint8_t hh = conv2d(__TIME__), mm = conv2d(__TIME__ + 3), ss = conv2d(__TIME__ + 6); // saves compile time to hh, mm and ss, meaning hours, minutes and seconds.
 
 void setup() {
   Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2);  // sets the earlier declared pins to be our serial2 tx/rx pins and starts communication.
-  WiFiConnect(ssid, password, 50000);
+  pinMode(36, INPUT); // used as the pin for the pulseSensor
+  WiFiConnect(ssid, password, 50000); // connects Esp32 to the wifi it has been assigned if available
   pinMode(RESETLINE, OUTPUT);  // allows us to reset the display
   digitalWrite(RESETLINE, 0);  // Reset the Display via pin 33
-  delay(100);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   digitalWrite(RESETLINE, 1);  // unReset the Display via pin 33
-  //delay(3500);
-  Serial2.println(hh);  // prints hours to display
-  Serial2.println(mm);  // prints minutes to display
-  Serial2.println(ss);  // prints seconds to display
-
+  vTaskDelay(3500 / portTICK_PERIOD_MS);
+  
+  // prints time to display
+    Serial2.print("a");
+    Serial2.print(hh);  // prints hours to display
+    Serial2.print(mm);  // prints minutes to display
+    Serial2.print(ss);  // prints seconds to display
 
   //Choosing accelerometer' range
     Wire.beginTransmission(0x68);
@@ -172,15 +186,16 @@ void setup() {
     Wire.endTransmission();
 
   // making the functions into tasks using FreeRTOS
-    xTaskCreatePinnedToCore(WeatherDataNow, "Weather", 3500, NULL, 0, NULL, pro_cpu);
-   // xTaskCreatePinnedToCore(internalTemp, "Temp", 3500, NULL, 1, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(watchOrientation, "Orientation", 3500, NULL, 2, NULL, tskNO_AFFINITY);
-    vTaskDelete(NULL);
+    xTaskCreatePinnedToCore(WeatherDataNow, "Weather", 3500, NULL, 3, NULL, app_cpu);
+    xTaskCreatePinnedToCore(internalTemp, "Temp", 1000, NULL, 4, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(watchOrientation, "Orientation", 1000, NULL, 5, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(Brightness, "Brightness Adjust", 3500, NULL, 6, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(pulseSensor,"BPM", 3500, NULL, 7, NULL, tskNO_AFFINITY);
 }
 
 void loop() {}
 
-
+// weatherdata task
 void WeatherDataNow(void* pvParameters) {
   while (1) {
     if (WiFi.status() == WL_CONNECTED) {
@@ -197,8 +212,7 @@ void WeatherDataNow(void* pvParameters) {
   }
 }
 
-
-//WiFi functions
+//WiFi functions for weatherdata
 void WiFiConnect(char SSID[], char pass[], int WiFiDelay) {
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -206,7 +220,6 @@ void WiFiConnect(char SSID[], char pass[], int WiFiDelay) {
     Serial.println(ssid);
     // Connect to WPA/WPA2 network:
     WiFi.begin(ssid, pass);
-
     vTaskDelay(WiFiDelay / portTICK_PERIOD_MS);
   }
 
@@ -218,6 +231,7 @@ void WiFiConnect(char SSID[], char pass[], int WiFiDelay) {
   printWifiData();
 }
 
+// prints wifi stuff for weatherdata
 void printWifiData() {
   Serial.print("Connected SSID: ");
   Serial.println(WiFi.SSID());
@@ -228,7 +242,7 @@ void printWifiData() {
   Serial.println(rssi);
 }
 
-//API functions
+//API functions used for weatherdata
 String APICall(String CityDef, String CountryDef, String OpenWeatherKeyDef) {
 
   //Makeing the API call to OpenWeatherMaps
@@ -250,12 +264,9 @@ String APICall(String CityDef, String CountryDef, String OpenWeatherKeyDef) {
     Serial.println("Error in HTTP request");
     Serial.println(ClientStatus);
   }
-
   client.end();
   return payload;
 }
-
-
 
 // Data processing & Deserialization
 WeatherData getData() {
@@ -349,55 +360,61 @@ WeatherData getData() {
 
   //Printing data, to ensure it is saved right. Automatically sends the data to the display
   if (DataToSerial == true) {
-    Serial2.print("\n\n\n***************** WeatherData ******************\n");
-    Serial2.print("--Location--\n");
-    Serial2.printf("Lat: %.2f\n", get.coord_lat);
-    Serial2.printf("Lon: %.2f\n", get.coord_lon);
+    Serial.print("\n\n\n***************** WeatherData ******************\n");
+    Serial.print("--Location--\n");
+    Serial.printf("Lat: %.2f\n", get.coord_lat);
+    Serial.printf("Lon: %.2f\n", get.coord_lon);
 
-    Serial2.printf("--Weather disc--\n");
-    Serial2.printf("Main: %s", get.weather_main);
-    Serial2.printf("Disc: %s", get.weather_description);
+    Serial.printf("--Weather disc--\n");
+    Serial.printf("Main: %s", get.weather_main);
+    Serial.printf("Disc: %s", get.weather_description);
+    Serial2.printf("f %s", get.weather_description);
 
-    Serial2.printf("--Temperature--\n");
-    Serial2.printf("Temperature is %.2f c. From %.2f c down to %.2f c\n", get.temp, get.temp_max, get.temp_min);
-    Serial2.printf("Due to a humidity of %i, it feels like %.2f c\n", get.humidity, get.temp_feels_like);
+    Serial.printf("--Temperature--\n");
+    Serial.printf("Temperature is %.2f c. From %.2f c down to %.2f c\n", get.temp, get.temp_max, get.temp_min);
+    Serial2.printf("c %.2f , %.2f , %.2f \n",get.temp, get.temp_max, get.temp_min); // trasnmits to screen three temperatures
+    Serial.printf("Due to a humidity of %i, it feels like %.2f c\n", get.humidity, get.temp_feels_like);
+    Serial2.printf("d %i , %.2f \n", get.humidity, get.temp_feels_like); // transmits feel like and humidity
 
-    Serial2.printf("--Winds--\n");
-    Serial2.printf("We have wind speeds of %.2f, comming form %s at a degree of %i\n", get.wind_speed, get.wind_direction, get.wind_deg);
 
-    Serial2.printf("--Sunrise/set--\n");  //Time is not converted to a right date.
-    Serial2.print("The sun rises at a time of ");
+    Serial.printf("--Winds--\n");
+    Serial.printf("We have wind speeds of %.2f, comming form %s at a degree of %i\n", get.wind_speed, get.wind_direction, get.wind_deg);
+    Serial2.printf("e %.2f, %s , %i\n", get.wind_speed, get.wind_direction, get.wind_deg); // transmits wind speed, wind direction and wind direction
+
+    Serial.printf("--Sunrise/set--\n");  //Time is not converted to a right date.
+    Serial.print("The sun rises at a time of ");
     TimeConvert(get.sys_sunrise);
-    Serial2.printf("The sun sets at a time of ");
+    Serial.printf("The sun sets at a time of ");
     TimeConvert(get.sys_sunset);
 
-    Serial2.printf("\nThe data is taken from %s, %s\n", get.sys_name, get.sys_country);
-    Serial2.print("At the time: ");
+    Serial.printf("\nThe data is taken from %s, %s\n", get.sys_name, get.sys_country);
+    Serial.print("At the time: ");
     TimeConvert(get.dt);
   }
   return get;
 }
 
+// Used in weatherdata to get sunrize and sundown
 void TimeConvert(long timegiven) {
   /*
     This code has been made to only account for the time zone of CET. And will therefor not work in other time zones.
   */
-
   time_t rawtime = timegiven;
   struct tm ts;
   char buf[80];
-
 
   // Formatting time to "ddd yyyy-mm-dd hh:mm:ss zzz" like "Thu 2023-05-04 10:29:40 CET"
   ts = *gmtime(&rawtime);
   ts.tm_hour += 2;
   strftime(buf, sizeof(buf), "%a %Y-%m-%d %H:%M:%S CET", &ts);
-  Serial2.printf("%s\n", buf);
+  Serial.printf("%s\n", buf);
+  Serial2.printf("g %s\n", buf);
 }
 
-// measures the orientation of the watch based on an accelerometer
+// task measures the orientation of the watch based on an accelerometer
 void watchOrientation(void* parameters) {
- 
+ while (1) {
+   
   //Getting measurements from Accelerometer
   Wire.beginTransmission(0x68);
   Wire.write(0x3B);
@@ -416,36 +433,121 @@ void watchOrientation(void* parameters) {
   
 
   if ((Roll <=30) && (Roll >=-45) && (Pitch <=30) && (Pitch >=-45) && ((float)AccZ/16384 > 0)) {
-    Serial.println("Turning on Screen");
+    Serial.println("Turning on Screen O");
+    Serial2.println("b , 15");
   }
   else {
-    Serial.println("Turning off Screen");
+    Serial.println("Turning off Screen O");
+    Serial2.println("b , 0");
   }
-  vTaskDelay(3000 / portTICK_PERIOD_MS);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+ }
 }
 
-// used for measuring the temperature at the sensor. Ideally place near the battery
+// task used for measuring the temperature at the sensor. Ideally place near the battery
 void internalTemp(void* parameters) {
-  
+  while (1) {  
   //Getting measurements from Temperature Sensor
   Wire.beginTransmission(0x68);
   Wire.write(0x41);
   Wire.endTransmission();
   Wire.requestFrom(0x68, 2);
   tempData = Wire.read() << 8 | Wire.read();
-
   Temp = (float)tempData;
-
   Temp = (Temp / 340) + 36.53;
 
-  if (Temp > 80) {
-    Serial2.println("Turning Off the Watch. Watch is too hot");
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    Serial2.println("0");
-  } else {
-    Serial.println(" Watch not burning");
+    if (Temp > 80) {
+      Serial.println("Turning Off the Watch. Watch is too hot");
+      Serial2.println("b , 0");
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
+    } 
+    else {
+      Serial.println(" Watch not burning");
+      vTaskDelay(3000 / portTICK_PERIOD_MS);
+    }
+  }
+}
+ 
+// Used in pulseSensor
+void finddiff() {
+  for (int i = 0; i < 10; i++) {
+    Comp[i] = analogRead(36);
+    vTaskDelay (75 / portTICK_PERIOD_MS);
   }
 
-  vTaskDelay(3000 / portTICK_PERIOD_MS);
+  psmaxval = Comp[0];
+  psminval = Comp[0];
+
+  for (int i = 0; i < (10 / sizeof(Comp[0])); i++) {
+    psmaxval = max(Comp[i], psmaxval);
+    psminval = min(Comp[i], psminval);
+  }
+  psdiff = psmaxval - psminval;
+}
+
+// pulseSensor task
+void pulseSensor(void* parameters){
+ while (1){
+  // put your main code here, to run repeatedly:
+  millis();
+  finddiff();
+  pspreviousVal = pscurrentVal;
+  pscurrentVal = analogRead(36);
+
+  if (pscurrentVal > psmaxVal) {
+    psmaxVal = pscurrentVal;
+  }
+
+  if (pscurrentVal < psminVal) {
+    psminVal = pscurrentVal;
+  }
+
+  pscheckVal = (psmaxVal - psminVal);
+  Serial.print("current: ");
+  Serial.print(pscurrentVal);
+  Serial2.print("h");
+  Serial2.print(pscurrentVal);
+  Serial2.println(pscheckVal);
+  Serial.print("    check: ");
+  Serial.println(pscheckVal);
+
+  if (pscurrentVal >= pscheckVal && psonce == false) {
+    psonce = true;
+    pslastBeat=pscurrentBeat;
+    pscurrentBeat=millis();
+   psBPM = ((pscurrentBeat-pslastBeat)*60)/1000;
+    if ((psBPM>45) && (psBPM<110)) {
+    //Serial.println(BPM);
+    }    
+
+  } else if (pscurrentVal <= pscheckVal - 10) {
+    psonce = true;
+  }
+ vTaskDelay (1000 / portTICK_PERIOD_MS);
  }
+}
+
+//LDR based screen brightness control task
+void Brightness (void *parameters) {
+  while (1) {
+  analogReadResolution(res);
+  LDR = analogRead(LDRsensor);
+
+    if (LDR <= 1023) {
+        Serial2.println("b , 3");
+        }
+        else if ((LDR > 1023) && (LDR <=2047)) {
+        Serial2.println("b , 7");
+        }
+        else if ((LDR > 2047) && (LDR <=3071)) {
+        Serial2.println("b , 11");
+        }
+        else {
+        Serial2.println("b , 15");
+        }  
+    }
+    vTaskDelay (1000 / portTICK_PERIOD_MS);
+  }
+
+
 
