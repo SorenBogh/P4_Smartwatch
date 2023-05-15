@@ -164,7 +164,8 @@ uint8_t hh = conv2d(__TIME__), mm = conv2d(__TIME__ + 3), ss = conv2d(__TIME__ +
 
 void setup() {
   Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2);  // sets the earlier declared pins to be our serial2 tx/rx pins and starts communication.
+  Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2); /*sets the earlier declared pins to be our serial2 tx/rx pins and starts communication. 
+Serial_8N1 refers to the formatting of the data sent, and is the standard the processor on the display uses, 8 bits, No parity, 1 stop bit.*/
   pinMode(36, INPUT); // used as the pin for the pulseSensor
   WiFiConnect(ssid, password, 50000); // connects Esp32 to the wifi it has been assigned if available
   pinMode(RESETLINE, OUTPUT);  // allows us to reset the display
