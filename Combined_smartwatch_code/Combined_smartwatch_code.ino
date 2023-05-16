@@ -32,6 +32,7 @@ Introduction
     Udover librarys skal der også indsættes følgende link i file -> preferences -> additional boards manager URL's:
     https://dl.espressif.com/dl/package_esp32_index.json
     Og der skal downloades ESP32 af Espressif Systems, fra board manager.
+    Følgende indstillinger skal laves Under tools -> partition scheme -> huge APP
 
 */
 
@@ -51,19 +52,18 @@ unsigned int pscurrentBeat;
 unsigned int pslastBeat;
 
 //test bools for weather functionality
-// bool Testing = false;      //Prints the API string
-// bool DataToSerial = true;  //Prints the Weather data after assigning
+ bool Testing = false;      //Prints the API string
+ bool DataToSerial = true;  //Prints the Weather data after assigning
 
 //setup of multicore for FreeRTOS
-
 static const BaseType_t pro_cpu = 0;
 static const BaseType_t app_cpu = 1;
 
 //Libraries
-//#include <WiFi.h>
-// #include <HTTPClient.h>
-// #include <ArduinoJson.h>
-// #include <time.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <time.h>
 #include <HardwareSerial.h>  // allow us to set which pins we want to use for serial communication, which is needed to communicate with the display
 #include <Wire.h>            // used for I2C communication between esp32 and sensors
 #include <BLEDevice.h>
@@ -104,7 +104,7 @@ int8_t tempData;
 float Roll, Pitch, Temp;
 float r2D = (3.14 / 180);  //Radian to Degrees
 
-/*
+
 //WiFi setup
   char ssid[] = "OnePlus 8T"; // name of wifi
   char password[] = "humahe47"; // wifi password
@@ -163,7 +163,7 @@ float r2D = (3.14 / 180);  //Radian to Degrees
   };
 
 WeatherData WeatherNow;  //A Global struct "case"
-*/
+
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -324,12 +324,11 @@ void setup() {
 
   Serial.begin(115200);
   initBLE();
-  xTaskCreate(showNotification, "ble", 3500, NULL, 3, NULL);
   Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2); /*sets the earlier declared pins to be our serial2 tx/rx pins and starts communication. 
 Serial_8N1 refers to the formatting of the data sent, and is the standard the processor on the display uses, 8 bits, No parity, 1 stop bit.*/
   pinMode(36, INPUT);                            // used as the pin for the pulseSensor
-  //WiFiConnect(ssid, password, 50000); // connects Esp32 to the wifi it has been assigned if available
+
   pinMode(RESETLINE, OUTPUT);  // allows us to reset the display
   digitalWrite(RESETLINE, 0);  // Reset the Display via pin 33
   vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -348,12 +347,15 @@ Serial_8N1 refers to the formatting of the data sent, and is the standard the pr
   Wire.write(0x0);
   Wire.endTransmission();
 
-  // making the functions into tasks using FreeRTOS
-  //  xTaskCreatePinnedToCore(WeatherDataNow, "Weather", 3500, NULL, 3, NULL, app_cpu);
-  xTaskCreatePinnedToCore(internalTemp, "Temp", 1000, NULL, 4, NULL, tskNO_AFFINITY);
+   //making the functions into tasks using FreeRTOS
+  xTaskCreate(showNotification, "ble", 3500, NULL, 3, NULL);
+  xTaskCreatePinnedToCore(WeatherDataNow, "Weather", 3500, NULL, 3, NULL, app_cpu);
+  xTaskCreatePinnedToCore(internalTemp, "Temp", 1000, NULL, 2, NULL, tskNO_AFFINITY);
   xTaskCreatePinnedToCore(watchOrientation, "Orientation", 1000, NULL, 5, NULL, tskNO_AFFINITY);
   xTaskCreatePinnedToCore(Brightness, "Brightness Adjust", 3500, NULL, 6, NULL, tskNO_AFFINITY);
   xTaskCreatePinnedToCore(pulseSensor, "BPM", 3500, NULL, 7, NULL, tskNO_AFFINITY);
+
+  WiFiConnect(ssid, password, 50000); // connects Esp32 to the wifi it has been assigned if available
 }
 
 void loop() {}
@@ -439,7 +441,7 @@ void copyMsg(String ms) {
   }
 }
 // weatherdata task
-/*
+
 void WeatherDataNow(void* pvParameters) {
   while (1) {
     if (WiFi.status() == WL_CONNECTED) {
@@ -640,8 +642,8 @@ WeatherData getData() {
 
 // Used in weatherdata to get sunrize and sundown
 void TimeConvert(long timegiven) {
-  /*
-    This code has been made to only account for the time zone of CET. And will therefor not work in other time zones.
+  
+    //This code has been made to only account for the time zone of CET. And will therefor not work in other time zones.
   
   time_t rawtime = timegiven;
   struct tm ts;
@@ -654,7 +656,7 @@ void TimeConvert(long timegiven) {
   Serial.printf("%s\n", buf);
   Serial2.printf("g %s\n", buf);
 }
-*/
+
 // task measures the orientation of the watch based on an accelerometer
 void watchOrientation(void* parameters) {
   while (1) {
