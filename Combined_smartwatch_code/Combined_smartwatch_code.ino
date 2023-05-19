@@ -7,9 +7,9 @@ Code currently has the functionality:
   Tells weatherdata
   LDR
   Heartrate monitor 
+  SMS'er/Messenger
 
 Things yet to be implemented:
-  -SMS'er/Messenger - Thoaaar has the code
   -consistent communication with display
 
 Things to do when all is implemented:
