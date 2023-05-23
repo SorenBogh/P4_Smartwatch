@@ -17,12 +17,12 @@ static BLECharacteristic* pCharacteristicRX;
 
 static bool deviceConnected = false;
 static int id = 0;
-long timeout = 10000, timer = 0, scrTimer = 0;
-bool rotate = false, flip = false, hr24 = true, notify = true, screenOff = false, scrOff = false, b1;
-int scroll = 0, bat = 0, lines = 0, msglen = 0;
+long timeout = 10000, timer = 0;
+bool  notify = true, b1;
+int lines = 0, msglen = 0;
 
 char msg[126];
-String msg0, msg1, msg2, msg3, msg4, msg5, lastmessage = "";
+String msg0, msg1, msg2, msg3, lastmessage = "";
 
 
 class MyServerCallbacks : public BLEServerCallbacks {
@@ -36,17 +36,6 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 class MyCallbacks : public BLECharacteristicCallbacks {
-
-  void onStatus(BLECharacteristic* pCharacteristic, Status s, uint32_t code) {
-  }
-
-  void onNotify(BLECharacteristic* pCharacteristic) {
-    uint8_t* pData;
-    std::string value = pCharacteristic->getValue();
-    int len = value.length();
-    pData = pCharacteristic->getData();
-  }
-
   void onWrite(BLECharacteristic* pCharacteristic) {
     uint8_t* pData;
     std::string value = pCharacteristic->getValue();
@@ -55,34 +44,11 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     if (pData != NULL) {
       if (pData[0] == 0xAB) {
         switch (pData[4]) {
-          case 0x7C:
-            hr24 = pData[6] == 0;
-            break;
-          case 0x78:
-            rotate = pData[6] == 1;
-            break;
-          case 0x74:
-            flip = pData[10] == 1;
-            break;
-          case 0x7B:
-            if (pData[6] >= 5 && pData[6] <= 30) {
-              timeout = pData[6] * 1000;
-            }
-
-            break;
-          case 0x23:
-            screenOff = pData[6] == 1;
-            break;
-          case 0x91:
-            bat = pData[7];
-            break;
           case 0x72:
             timer = millis();
             msglen = pData[2] - 5;
             lines = ceil(float(msglen) / 21);
-            scroll = 0;
             msg[msglen] = 0;
-            scrOff = false;
             if (pData[6] == 1) {
               //call
               timer = millis() + 15000;
@@ -92,7 +58,6 @@ class MyCallbacks : public BLECharacteristicCallbacks {
             } else if (pData[6] == 2) {
               //cancel call
               timer = millis() - timeout;
-              scrOff = true;
             } else {
               //notification
               for (int x = 0; x < len; x++) {
@@ -124,16 +89,6 @@ class MyCallbacks : public BLECharacteristicCallbacks {
               msg[x + 69] = char(pData[x + 1]);
             }
             break;
-          case 4:
-            for (int x = 0; x < len - 1; x++) {
-              msg[x + 88] = char(pData[x + 1]);
-            }
-            break;
-          case 5:
-            for (int x = 0; x < len - 1; x++) {
-              msg[x + 107] = char(pData[x + 1]);
-            }
-            break;
         }
       }
     }
@@ -141,7 +96,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 };
 
 void initBLE() {
-  BLEDevice::init("ESP32DAP");
+  BLEDevice::init("ESP32DAP2");
   BLEServer* pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
@@ -208,49 +163,16 @@ void copyMsg(String ms) {
       msg0 = ms.substring(0, msglen);
       msg1 = "";
       msg2 = "";
-      msg3 = "";
-      msg4 = "";
-      msg5 = "";
       break;
     case 2:
       msg0 = ms.substring(0, 21);
       msg1 = ms.substring(21, msglen);
       msg2 = "";
-      msg3 = "";
-      msg4 = "";
-      msg5 = "";
       break;
     case 3:
       msg0 = ms.substring(0, 21);
       msg1 = ms.substring(21, 42);
       msg2 = ms.substring(42, msglen);
-      msg3 = "";
-      msg4 = "";
-      msg5 = "";
-      break;
-    case 4:
-      msg0 = ms.substring(0, 21);
-      msg1 = ms.substring(21, 42);
-      msg2 = ms.substring(42, 63);
-      msg3 = ms.substring(63, msglen);
-      msg4 = "";
-      msg5 = "";
-      break;
-    case 5:
-      msg0 = ms.substring(0, 21);
-      msg1 = ms.substring(21, 42);
-      msg2 = ms.substring(42, 63);
-      msg3 = ms.substring(63, 84);
-      msg4 = ms.substring(84, msglen);
-      msg5 = "";
-      break;
-    case 6:
-      msg0 = ms.substring(0, 21);
-      msg1 = ms.substring(21, 42);
-      msg2 = ms.substring(42, 63);
-      msg3 = ms.substring(63, 84);
-      msg4 = ms.substring(84, 105);
-      msg5 = ms.substring(105, msglen);
       break;
   }
 }
