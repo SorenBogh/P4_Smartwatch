@@ -76,21 +76,26 @@ static const BaseType_t app_cpu = 1;
 #define RXp2 25       // Sets the TX and RX pins to pin 25 and 26. This is necessary as the standard pins for an esp32 are used for the built in display on the ttgo t1 board
 #define TXp2 26
 
-uint8_t type[] = { 0xAB, 0x00, 0x11, 0xFF, 0x92, 0xC0, 0x01, 0x01, 0x38, 0x81, 0x10, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xA2, 0x00, 0x80 };  // id for DT78 app
+// ID's used for Chronos app
+uint8_t type[] = { 0xAB, 0x00, 0x11, 0xFF, 0x92, 0xC0, 0x01, 0x01, 0x38, 0x81, 0x10, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xA2, 0x00, 0x80 }; 
 
+// BLE UUIDS for the chronos app
 #define SERVICE_UUID "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 #define CHARACTERISTIC_UUID_RX "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 #define CHARACTERISTIC_UUID_TX "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 
+// Creating pointers for BLE
 static BLECharacteristic* pCharacteristicTX;
 static BLECharacteristic* pCharacteristicRX;
 
+// Creating Variables for BLE
 static bool deviceConnected = false;
 static int id = 0;
 long timeout = 10000, timer = 0;
 bool  notify = true;
 int lines = 0, msglen = 0;
 
+// Creating char array for BLE notifications
 char msg[126];
 String msg0, msg1, msg2, msg3, lastmessage = "";
 
@@ -221,6 +226,8 @@ Serial_8N1 refers to the formatting of the data sent, and is the standard the pr
 
 void loop() {}
 
+
+// BLE Start
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
@@ -232,7 +239,7 @@ class MyServerCallbacks : public BLEServerCallbacks {
 };
 
 
-// BLE Start
+
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic) {
     uint8_t* pData;
