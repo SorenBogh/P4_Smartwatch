@@ -231,6 +231,8 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
+
+// BLE Start
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic) {
     uint8_t* pData;
@@ -339,8 +341,6 @@ void showNotification(void* pvParameters) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
-
-
 void copyMsg(String ms) {
   switch (lines) {
     case 1:
@@ -360,6 +360,9 @@ void copyMsg(String ms) {
       break;
   }
 }
+// BLE End
+
+
 // weatherdata task
 
 void WeatherDataNow(void* pvParameters) {
