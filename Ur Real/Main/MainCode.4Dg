@@ -1,7 +1,7 @@
 #platform "pixxiLCD-13P2CT-CLB"
 
 
-// Program Skeleton 1.7 generated 24/05/2023 09.22.31
+// Program Skeleton 1.7 generated 09/05/2023 13.27.50
 
 // #MODE RUNFLASH uncomment and set Destination to Flash to run from Flash, refer 4D-AN-00055
 
@@ -11,38 +11,629 @@
 
 // var gradientRAM[29+xxx*2] := [-1,-1,-9999,0,0,xxx] ;  // uncomment and replace xxx with maximum of all inherent 'media' widgets
 
-#inherit "MainCodeConst.inc"
+#inherit "TestConst.inc"
+
+
+ //Clock Related
+
+var hourT := 48;
+var hourO := 48;
+var minT := 48;
+var minO := 48;
+var sec := 0;
+//Count is for  putting chars into the right place
+var count := 0;
+
+//Setup
+var test := 0; //Change back to 0      // Set to 1 for testing
+
+0
+//Which menu we are on
+var menuItem := 0;
+
+  //Bottom button
+ #constant LEFT 0
+#constant TOP 200
+#constant TEXTWIDTH 2
+#constant TEXTHEIGHT 3
+
+  //Slider
+  var valR := 15;
+  var x, y ;
+
+ //Justere tid
+var testBool:= 0;
+var numSelection := 0;
+var increaseNum := 0;
+
+
+//Clock Related
+
+func SetupClock(var cha)
+        switch(count)
+
+                case 0:
+                hourT := cha;
+                break;
+
+                case 1:
+                hourO :=cha;
+                break;
+
+                case 2:
+                minT := cha;
+                break;
+
+                case 3:
+                minO := cha;
+                test :=1;
+                break;
+
+                default:
+                break;
+
+                endswitch
+
+
+                count++;
+
+
+endfunc
+
+func increaseMin()
+ sys_SetTimer(TIMER5, 60000);
+ //sys_SetTimer(TIMER5, 1000);
+    minO++;
+    if(minO >= 58)
+
+        minO := 48;
+        minT ++;
+
+    endif
+
+    if(minT >= 54)
+      minO := 48;
+      minT := 48;
+      increaseHour();
+    endif
+
+    if(menuItem == 0)
+    ShowWatch();
+    endif
+
+endfunc
+
+func increaseHour()
+    hourO ++;
+
+    if(hourO >= 58)
+
+        hourO := 48;
+        hourT ++;
+
+    endif
+
+    if(hourT == 50 && hourO == 52)
+      hourO := 48;
+      hourT := 48;
+
+    endif
+
+endfunc
+
+func ShowWatch()
+    txt_Width(3);
+    txt_Height(5);
+    gfx_MoveTo(40, 80);
+    print([CHR]hourT);
+    print([CHR]hourO);
+    print(":");
+    print([CHR]minT);
+    print([CHR]minO);
+    gfx_BGcolour(BLACK);
+    gfx_Button(UP, LEFT, TOP, BLACK, BLACK, FONT3, TEXTWIDTH,
+ TEXTHEIGHT, "              ");
+  touch_DetectRegion(0, 0, 240, 240);
+ gfx_Button(UP, 0, 0, BLACK, BLACK, FONT3, TEXTWIDTH,
+            TEXTHEIGHT, "              ");
+
+
+endfunc
+
+
+
+
+func ChangeClock(var selection)
+txt_Width(3);
+    txt_Height(5);
+    gfx_MoveTo(40, 80);
+     switch(selection)
+
+
+     case 0:
+        if (increaseNum == 1)
+            increaseNum := 0;
+            hourT ++;
+            if(hourT >= 51)
+                hourT := 48;
+            endif
+        endif
+        txt_Set(1,RED);
+        print([CHR]hourT);
+        txt_Set(1,BLACK);
+        print([CHR]hourO);
+        print(":");
+        print([CHR]minT);
+        print([CHR]minO);
+        break;
+
+    case 1:
+        if (increaseNum == 1)
+            increaseNum := 0;
+            hourO ++;
+            if(hourO > 57 || (hourT == 50 && hourO >= 52))
+                hourO := 48;
+            endif
+        endif
+        print([CHR]hourT);
+        txt_Set(1,RED);
+        print([CHR]hourO);
+        txt_Set(1,BLACK);
+        print(":");
+        print([CHR]minT);
+        print([CHR]minO);
+        break;
+
+    case 2:
+        if (increaseNum == 1)
+            increaseNum := 0;
+            minT ++;
+            if(minT >= 54)
+                minT := 48;
+            endif
+        endif
+        print([CHR]hourT);
+        print([CHR]hourO);
+        print(":");
+        txt_Set(1,RED);
+        print([CHR]minT);
+        txt_Set(1,BLACK);
+        print([CHR]minO);
+        break;
+
+    case 3:
+        if (increaseNum == 1)
+            increaseNum := 0;
+            minO ++;
+            if(minO > 57)
+                minO := 48;
+            endif
+        endif
+        print([CHR]hourT);
+        print([CHR]hourO);
+        print(":");
+        print([CHR]minT);
+        txt_Set(1,RED);
+        print([CHR]minO);
+        txt_Set(1,BLACK);
+        break;
+
+    default:
+    break;
+
+    endswitch
+
+endfunc
+
+
+
+//////
+
+
+//Draw a red slider to the screen
+func drawRedSlider(var firstTimeShift)
+    if(firstTimeShift == 1)
+        valR := gfx_XYlinToVal(x, y, XYLIN_X, 30, 200, 0, 15) ;
+    endif
+
+    gfx_Slider(0,30,100,200,150,RED,15, valR);
+    txt_MoveCursor(10,12);
+    txt_Set(TEXT_OPACITY, OPAQUE);
+    txt_Set(TEXT_COLOUR, RED);
+    txt_Width(2);
+    txt_Height(3);
+    txt_MoveCursor(1,4);
+    print (" ");
+
+    print(gfx_XYlinToVal(valR,0,XYLIN_X,0,15,0,100));
+    print("   ");
+    gfx_Set(CONTRAST,valR);
+
+endfunc
+
+
+
+
+ //Check if someone touched the sceen or moved their finger across
+func CheckTouch(var state)
+//-----------------------------------------------------------------------------------------
+    if(state == TOUCH_PRESSED)                        // if there's a press
+        x := touch_Get(TOUCH_GETX);
+        y := touch_Get(TOUCH_GETY);
+
+        if(menuItem == 0)
+
+            if(y < 30)
+                testBool := !testBool;
+                if(testBool == 0)
+                    gfx_Cls();
+                    ChangeMenu(menuItem);
+                    numSelection := 0;
+                endif
+            endif
+
+            if(testBool == 1)
+
+                gfx_Button(UP, 190, 70, BLUE, WHITE, FONT3, 2,  2, "+");
+                gfx_Button(UP, 190, 120, BLUE, WHITE, FONT3, 1, 2, "Next");
+                if(y <=90 && y >=70 && x >= 190)
+                    gfx_Button(DOWN, 190, 70, RED, BLACK, FONT3, 2,  2, "+");
+                    increaseNum := 1;
+                else if( y <=140 && y >=120 && x >= 190)
+                    gfx_Button(DOWN, 190, 120, RED, BLACK, FONT3, 1,  2, "Next");
+                    numSelection++;
+                endif
+                ChangeClock(numSelection);
+            endif
+
+            if(numSelection > 3)
+                numSelection := 0;
+            endif
+
+        endif
+        if(y< 150 && y >=100 && menuItem == 1)
+            drawRedSlider(1);
+            endif
+
+        if(y > TOP)
+            testBool := 0;
+            if(menuItem == 0)
+                menuItem := 1;
+                touch_DetectRegion(0,0,240,240);
+            else
+                menuItem := 0;
+            endif
+
+
+            ChangeMenu(menuItem);
+            while(touch_Get(TOUCH_STATUS) != TOUCH_RELEASED);
+
+        endif
+
+    endif
+
+        //-----------------------------------------------------------------------------------------
+        if(state == TOUCH_RELEASED)                      // if there's a release
+            if(testBool == 1)
+                if(y <=90 && y >=70 && x >= 190)
+                    gfx_Button(UP, 190, 70, BLUE, WHITE, FONT3, 2,  2, "+");
+                else if( y <=140 && y >=120 && x >= 190)
+                    gfx_Button(UP, 190, 120, BLUE, WHITE, FONT3, 1, 2, "Next");
+                endif
+            endif
+
+
+
+        endif
+
+        //-----------------------------------------------------------------------------------------
+        if(state == TOUCH_MOVING)// if it's moving
+            if(y <=150 && y >=100 && menuItem == 1)
+                x := touch_Get(TOUCH_GETX);
+                y := touch_Get(TOUCH_GETY);
+
+                drawRedSlider(1);
+            endif
+        endif
+
+
+endfunc
+
+ //Change what is displayed on the screen
+func ChangeMenu(var menu)
+    switch(menu)
+
+        case 0:
+            gfx_BGcolour(BLACK);
+            txt_Set(0,LIMEGREEN);
+            txt_Set(1,BLACK);
+            gfx_Cls();
+            pause(30);
+            ShowWatch();
+        break;
+
+
+        case 1:
+            txt_Set(1,WHITE);
+            gfx_BGcolour(WHITE);
+            gfx_Cls();
+            drawRedSlider(0);
+
+            gfx_Button(UP, LEFT, TOP, WHITE, WHITE, FONT3, TEXTWIDTH,
+ TEXTHEIGHT,  "              ");
+        break;
+
+
+        default:
+        break;
+
+    endswitch
+
+endfunc
+
+
+var testbool1 := 0;
+
+func ReadSerial()
+touch_Set(TOUCH_DISABLE);
+//pause(5);
+    var ch;
+    var i;
+    //for(i := 0; i <3000; i++)
+    while(ch != 42)
+        ch := serin();
+
+            if (ch != -1)
+                 testbool1 := 1;
+
+                if(isalpha(ch) && messageLetter == '')
+                    SerialFunctionDecoder(ch);
+
+
+                endif
+
+                if(messageLetter != '')
+
+
+                endif
+
+                //print([CHR]ch);
+                SerialFunctionPicker(ch);
+            else if(testbool1 == 0)
+                break;
+            endif
+            //print([CHR]ch);
+    wend
+    testbool1 := 0;
+    messageLetter := '';
+
+    //pause(5);
+    touch_Set(TOUCH_ENABLE);
+    sys_SetTimer(TIMER4, 500);
+endfunc
+
+
+func SerialFunctionDecoder(var msg)
+
+    switch(msg)
+
+
+        case 97:
+            messageLetter :='a';
+
+        break;
+
+        case 98:
+            messageLetter := 'b';
+
+        break;
+
+        default:
+        break;
+
+    endswitch
+
+endfunc
+
+
+var p;
+var buffer[500];
+var nextplace;
+var n:= 0;
+var newBufferVal[500];
+func SerialFunctionPicker(var msg)
+p := str_Ptr(buffer);
+    if(msg != 42)
+        if(n>0)
+            buffer[n-1] := msg;
+            //str_PutByte(p+n-1,msg);
+        endif
+        n++;
+    endif
+    if(msg == 42)
+
+        var i;
+        for(i := 0; i<n-1; i++)
+            switch(buffer[i])
+
+
+                case 48:
+                    newBufferVal[i] := 0;
+                break;
+
+                case 49:
+                    newBufferVal[i] := 1;
+                break;
+
+                case 50:
+                    newBufferVal[i] := 2;
+                break;
+
+                case 51:
+                    newBufferVal[i] := 3;
+                break;
+
+                case 52:
+                    newBufferVal[i] := 4;
+                break;
+
+                case 53:
+                    newBufferVal[i] := 5;
+                break;
+
+                case 54:
+                    newBufferVal[i] := 6;
+                break;
+
+                case 55:
+                    newBufferVal[i] := 7;
+                break;
+
+                case 56:
+                    newBufferVal[i] := 8;
+                break;
+
+                case 57:
+                    newBufferVal[i] := 9;
+                break;
+
+                default:
+                break;
+
+            endswitch
+
+
+
+        next
+
+
+
+    switch(messageLetter)
+
+        case 'a':
+
+        break;
+
+        case 'b':
+            var bVal;
+            if(n-1 > 1)
+
+                bVal := newBufferVal[0] *10;
+                bVal += newBufferVal[1];
+            else
+                bVal := newBufferVal[0];
+            endif
+
+
+            valR := bVal;
+            gfx_Set(CONTRAST,valR);
+        break;
+
+
+    endswitch
+    n:=0;
+    endif
+
+endfunc
+
+var messageLetter := '';
 
 func main()
-//  var hstrings ; // Handle to access uSD strings, uncomment if required
-//  var hFontx ;   // Handle to access uSD fonts, uncomment if required and change n to font number
-//  Uncomment the following if uSD images, fonts or strings used.
-/*
-    // for Fat File System
-    putstr("Mounting...\n");
-    if (!(file_Mount()))                // for uSD cards that run at full speed
-        while(!(file_Mount()))
-            putstr("Drive not mounted...");
-            pause(200);
-            gfx_Cls();
-            pause(200);
-        wend
-    endif
-    // for (GCI) Flash File System
-    media_InitFlash(FLASH_ADDR_DEF_COMMAND) ;                          // use media_Init if PmmC < v20 and flash <= 16MB
-//    gfx_TransparentColour(0x0020);    // uncomment if transparency required, please understand why and when you need to use this
-//    gfx_Transparency(ON);             // uncomment if transparency required, as generally there is a performance hit when using it
 
-    // for Fat File System
-//  hFontn := file_LoadImageControl("MainCode.dan", "MainCode.gcn", 1); // Open handle to access uSD fonts, uncomment if required and change n to font number dropping a and c if > 9
-//  hstrings := file_Open("MainCode.txf", 'r') ; // Open handle to access uSD strings, uncomment if required
-    hndl := file_LoadImageControl("MainCode.dat", "MainCode.gci", 1);
-    // for (GCI) Flash File System
-    hndl := file_LoadImageControl(0, 0, 3); // fonts, strings and WAV files are all entries in here.
-*/
+   //Touch///////
 
+    touch_Set(TOUCH_ENABLE);
+    var state;
+
+
+
+
+   /////////
+
+
+
+
+    var ch;
+    gfx_MoveTo(40, 100);
+    touch_DetectRegion(0,0,240,240);
+    txt_MoveCursor(3,4);
+    //BUTTON////////
 
     repeat
+
+    ///////////
+        if(test == 0)
+        ch := serin();
+
+        if (ch != -1)
+            if(ch == 97)
+                messageLetter := ch;
+            endif
+            if (isdigit(ch) && messageLetter == 97)
+
+                SetupClock(ch);
+
+            endif
+
+
+        endif
+        endif
+
+
+
+        if(test == 1)
+
+            //Sæt ur som startskærm
+            txt_Set(1,BLACK);
+            gfx_BGcolour(BLACK);
+            gfx_Cls();
+            ShowWatch();
+
+            //Sæt uret til at ticke op 1 gang i minuttet
+            sys_SetTimer(TIMER5, 60000);
+            //sys_SetTimerEvent(TIMER5, increaseMin);
+
+            //Sæt timer til at læse fra Serial
+            sys_SetTimer(TIMER4, 500);
+            sys_SetTimerEvent(TIMER4, ReadSerial);
+
+
+            //Lav en "Usynlig knap i bunden og toppen af skærmen
+            gfx_BevelWidth(0);
+            gfx_BevelShadow(0);
+            gfx_Button(UP, LEFT, TOP, BLACK, BLACK, FONT3, TEXTWIDTH,
+            TEXTHEIGHT, "              ");
+            gfx_Button(UP, 0, 0, BLACK, BLACK, FONT3, TEXTWIDTH,
+            TEXTHEIGHT, "              ");
+
+
+            //Gør klar til at modtage igen
+            messageLetter := '';
+
+
+            //Done med opsætning
+            test := 2;
+
+            gfx_MoveTo(40, 80);
+        endif
+
+
+        //Main loopet der køre når opsætning er done.
+        if(test == 2)
+
+
+            // Check if display is pressed
+            state := touch_Get(TOUCH_STATUS);               // get touchscreen status
+            CheckTouch(state);
+        endif
+
     forever
 endfunc
+
+
+
+
+
+
+
 
