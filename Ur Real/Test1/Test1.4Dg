@@ -1,0 +1,144 @@
+#platform "pixxiLCD-13P2CT-CLB"
+
+
+// Program Skeleton 1.7 generated 25/04/2023 11.34.47
+
+// #MODE RUNFLASH uncomment and set Destination to Flash to run from Flash, refer 4D-AN-00055
+
+#inherit "4DGL_16bitColours.fnc"
+
+#inherit "VisualConst.inc"
+
+ //var gradientRAM[29+300*2] := [-1,-1,-9999,0,0,300] ;  // uncomment and replace xxx with maximum of all inherent 'media' widgets
+
+#inherit "SNGConst.inc"
+
+
+ var testbool := 0;
+ var valR :=15;
+ var startBool := 0;
+ //Draw a red slider to the screen
+func drawRedSlider()
+
+    if(startBool == 1)
+        valR := gfx_XYlinToVal(x, y, XYLIN_X, 30, 200, 0, 15) ;
+
+    endif
+    gfx_Slider(0,30,80,200,120,RED,15, valR);
+    txt_MoveCursor(10,12);
+    txt_Set(TEXT_OPACITY, OPAQUE);
+    txt_Set(TEXT_COLOUR, RED);
+    txt_Width(2);
+    txt_Height(3);
+    txt_MoveCursor(1,4);
+    print (" ");
+
+    print(valR);
+    print("   ");
+    gfx_Set(CONTRAST,valR);
+     startBool := 1;
+endfunc
+
+
+
+func DimScreen()
+
+ var i;
+ testBool := 1;
+    for( i:= valR; i > 2; i--)
+
+      gfx_Set(CONTRAST,i);
+      pause(50);
+    next
+
+
+
+endfunc
+
+
+func BrightenScreen()
+
+   var i;
+   if(testBool == 1)
+    for( i:= 2; i < valR; i++)
+
+        gfx_Set(CONTRAST,i);
+        pause(50);
+    next
+    testBool := 0;
+   endif
+
+endfunc
+
+
+ var x,y;
+ var testBool := 0;
+ var increaseNum := 0;
+func main()
+var state;
+touch_Set(TOUCH_ENABLE);                         // enable the touch screen
+  touch_DetectRegion(0,0,240,240);
+  gfx_Button(UP, 80, 200, BLUE, WHITE, FONT3, 2,
+ 2, "PRESS");
+
+  drawRedSlider();
+  txt_MoveCursor(4,7);
+   print(increaseNum);
+  gfx_Set(CONTRAST,15);
+  sys_SetTimer(TIMER5,30000);
+  sys_SetTimerEvent(TIMER5, DimScreen);
+ repeat
+
+  state := touch_Get(TOUCH_STATUS);               // get touchscreen status
+
+        //-----------------------------------------------------------------------------------------
+        if(state == TOUCH_PRESSED)                        // if there's a press
+            x := touch_Get(TOUCH_GETX);
+            y := touch_Get(TOUCH_GETY);
+
+            txt_MoveCursor(4,7);
+            if(y>=200)
+                gfx_Button(DOWN, 80, 200, WHITE, RED, FONT3, 2,
+                2, "PRESS");
+                increaseNum++;
+
+                print(increaseNum);
+
+
+
+
+            endif
+            if(y <=120 && y >=80)
+             drawRedSlider();
+
+            endif
+            sys_SetTimer(TIMER5,30000);
+            BrightenScreen();
+        endif
+
+        //-----------------------------------------------------------------------------------------
+        if(state == TOUCH_RELEASED)                      // if there's a release
+             if(y>=200)
+             gfx_Button(UP, 80, 200, BLUE, WHITE, FONT3, 2,
+                2, "PRESS");
+                txt_MoveCursor(4,4);
+
+            endif
+
+
+        endif
+
+        //-----------------------------------------------------------------------------------------
+        if(state == TOUCH_MOVING)// if it's moving
+        if(y <=120 && y >=80)
+            x := touch_Get(TOUCH_GETX);
+            y := touch_Get(TOUCH_GETY);
+             drawRedSlider();
+
+            endif
+        endif
+
+forever
+
+endfunc
+

@@ -1,0 +1,48 @@
+#platform "pixxiLCD-13P2CT-CLB"
+
+
+// Program Skeleton 1.7 generated 24/05/2023 09.22.31
+
+// #MODE RUNFLASH uncomment and set Destination to Flash to run from Flash, refer 4D-AN-00055
+
+#inherit "4DGL_16bitColours.fnc"
+
+#inherit "VisualConst.inc"
+
+// var gradientRAM[29+xxx*2] := [-1,-1,-9999,0,0,xxx] ;  // uncomment and replace xxx with maximum of all inherent 'media' widgets
+
+#inherit "MainCodeConst.inc"
+
+func main()
+//  var hstrings ; // Handle to access uSD strings, uncomment if required
+//  var hFontx ;   // Handle to access uSD fonts, uncomment if required and change n to font number
+//  Uncomment the following if uSD images, fonts or strings used.
+/*
+    // for Fat File System
+    putstr("Mounting...\n");
+    if (!(file_Mount()))                // for uSD cards that run at full speed
+        while(!(file_Mount()))
+            putstr("Drive not mounted...");
+            pause(200);
+            gfx_Cls();
+            pause(200);
+        wend
+    endif
+    // for (GCI) Flash File System
+    media_InitFlash(FLASH_ADDR_DEF_COMMAND) ;                          // use media_Init if PmmC < v20 and flash <= 16MB
+//    gfx_TransparentColour(0x0020);    // uncomment if transparency required, please understand why and when you need to use this
+//    gfx_Transparency(ON);             // uncomment if transparency required, as generally there is a performance hit when using it
+
+    // for Fat File System
+//  hFontn := file_LoadImageControl("MainCode.dan", "MainCode.gcn", 1); // Open handle to access uSD fonts, uncomment if required and change n to font number dropping a and c if > 9
+//  hstrings := file_Open("MainCode.txf", 'r') ; // Open handle to access uSD strings, uncomment if required
+    hndl := file_LoadImageControl("MainCode.dat", "MainCode.gci", 1);
+    // for (GCI) Flash File System
+    hndl := file_LoadImageControl(0, 0, 3); // fonts, strings and WAV files are all entries in here.
+*/
+
+
+    repeat
+    forever
+endfunc
+

@@ -1,0 +1,40 @@
+#platform "pixxiLCD-13P2CT-CLB"
+
+
+// Program Skeleton 1.7 generated 11/05/2023 10.54.21
+
+// #MODE RUNFLASH uncomment and set Destination to Flash to run from Flash, refer 4D-AN-00055
+
+#inherit "4DGL_16bitColours.fnc"
+
+#inherit "VisualConst.inc"
+
+// var gradientRAM[29+xxx*2] := [-1,-1,-9999,0,0,xxx] ;  // uncomment and replace xxx with maximum of all inherent 'media' widgets
+
+#inherit "Test2Const.inc"
+
+
+
+
+func main()
+
+
+   txt_MoveCursor(3,4);
+txt_Width(1);
+    txt_Height(1);
+
+
+     var ch;
+
+    repeat
+               ch := serin();
+
+        if (ch != -1)
+
+                print([CHR]ch);
+
+         endif
+
+    forever
+endfunc
+
